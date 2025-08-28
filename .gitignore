@@ -1,0 +1,91 @@
+# === Elixir/Phoenix ===
+_build/
+cover/
+deps/
+doc/
+.fetch
+erl_crash.dump
+*.ez
+tmp/
+omnireach-*.tar
+priv/static/assets/
+priv/static/cache_manifest.json
+**/*.beam
+**/*.app
+**/*.script
+**/*.boot
+
+# === Compiled Assets ===
+**/assets/css/
+**/assets/js/
+**/assets/vendor/
+priv/static/
+priv/static/audio
+**/*.app.css
+
+# === More Build Artifacts ===
+**/*.scripts
+**/db/scripts/
+
+# === Node.js ===
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+
+# === Python ===
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/venv/
+**/env/
+**/.venv/
+*.egg-info/
+
+# === Application Data ===
+**/data/
+**/storage/
+uploads/
+
+# === Database ===
+vol/
+*.db
+*.sqlite
+*.sqlite3
+
+# === WhatsApp Session Data ===
+**/.wwebjs_auth/
+**/.wwebjs_cache/
+session/
+sessions/
+
+# === Environment Files ===
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*
+**/.env
+**/.env.*
+
+# === Logs ===
+*.log
+logs/
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*google-credentials.json
+omnireach/priv/static/audio/response_false_923084612146@c.us_6E223158199317B9BC5FC747543162C1.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_3612F454FF874AA851426452DD5145B1.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_4498D0D2D8997B257384CBFA2A75C492.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_229137B97F65FBF57AB12F99049983BF.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_2090800ABE23C73663064317FDEA38D6.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_B1BCA9BE0B00EB4E543DE22F0B9A50F8.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_B505DB5217DAD9579726CD71340860E1.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_D8C676F1317CB3A62918B082AD503039.ogg
+omnireach/priv/static/audio/response_false_923084612146@c.us_DC545948768A090A2A7F7F9CF593D103.ogg

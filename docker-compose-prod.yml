@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    build:
+      context: db
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 5435:5432
+    volumes:
+      - ./vol/dev/db/data:/var/lib/postgresql/data
+      - ./cscripts:/cscripts
+    env_file: .env.prod
+
+  flaskapp:
+    build: 
+     context: flask_app
+    command: flask run --host=0.0.0.0 
+    restart: always
+    ports:
+      - 5000:5000
+    depends_on:
+      - db
+    environment:
+      - FLASK_APP=app.main
+      - DATABASE_URL=postgres://postgres:lxl6707@db:5435/logic_app_db
+    volumes:
+      - ./static_files:/static_files
+      - ./easyocr:/root/.EasyOCR
+    env_file: .env.prod
+
+  elixirapp:
+    build:
+     context: logis_app
+    command: mix phx.server
+    restart: always
+    ports:
+      - 4007:4007
+    depends_on:
+      - db
+    volumes:
+      - ./static_files:/static_files
+    env_file: .env.prod
+

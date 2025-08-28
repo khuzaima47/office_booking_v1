@@ -1,0 +1,231 @@
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+  <.header>
+    My Bookings
+    <:subtitle>Manage your room reservations</:subtitle>
+    <:actions>
+      <.link navigate={~p"/gallery"}>
+        <.button>Book a Room</.button>
+      </.link>
+      <.link patch={~p"/bookings/new"}>
+        <.button class="bg-green-600 hover:bg-green-700">New Booking</.button>
+      </.link>
+    </:actions>
+  </.header>
+
+  <!-- Filter Tabs -->
+  <div class="mt-8 mb-6">
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8">
+        <button
+          phx-click="filter_bookings"
+          phx-value-filter="upcoming"
+          class={[
+            "py-2 px-1 border-b-2 font-medium text-sm",
+            if(@filter == "upcoming", 
+               do: "border-indigo-500 text-indigo-600", 
+               else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+          ]}
+        >
+          Upcoming
+        </button>
+        
+        <button
+          phx-click="filter_bookings"
+          phx-value-filter="past"
+          class={[
+            "py-2 px-1 border-b-2 font-medium text-sm",
+            if(@filter == "past", 
+               do: "border-indigo-500 text-indigo-600", 
+               else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+          ]}
+        >
+          Past
+        </button>
+
+        <%= if OfficeBooking.Accounts.admin?(@current_user) do %>
+          <button
+            phx-click="filter_bookings"
+            phx-value-filter="all"
+            class={[
+              "py-2 px-1 border-b-2 font-medium text-sm",
+              if(@filter == "all", 
+                 do: "border-indigo-500 text-indigo-600", 
+                 else: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")
+            ]}
+          >
+            All Bookings (Admin)
+          </button>
+        <% end %>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Bookings List -->
+  <%= if @bookings != [] do %>
+    <div class="space-y-4">
+      <div 
+        :for={booking <- @bookings} 
+        class="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center mb-2">
+              <h3 class="text-lg font-semibold text-gray-900 mr-4">
+                <%= booking.title %>
+              </h3>
+              
+              <span class={[
+                "inline-flex px-2 py-1 text-xs rounded-full font-medium",
+                cond do
+                  booking.status == "cancelled" -> "bg-red-100 text-red-800"
+                  OfficeBooking.Bookings.Booking.in_progress?(booking) -> "bg-green-100 text-green-800"
+                  OfficeBooking.Bookings.Booking.active?(booking) -> "bg-blue-100 text-blue-800"
+                  true -> "bg-gray-100 text-gray-800"
+                end
+              ]}>
+                <%= cond do
+                  booking.status == "cancelled" -> "Cancelled"
+                  OfficeBooking.Bookings.Booking.in_progress?(booking) -> "In Progress"
+                  OfficeBooking.Bookings.Booking.active?(booking) -> "Confirmed"
+                  true -> "Past"
+                end %>
+              </span>
+              
+              <span class="ml-2 text-xs text-gray-500">#<%= booking.id %></span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-6a1 1 0 00-1-1H9a1 1 0 00-1 1v6a1 1 0 01-1 1H4a1 1 0 110-2V4z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="font-medium"><%= booking.room.name %> (<%= booking.room.capacity %> people)</span>
+              </div>
+              
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                </svg>
+                <span><%= booking.room.location %></span>
+              </div>
+              
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                </svg>
+                <span>
+                  Start: <%= OfficeBooking.Bookings.Booking.format_datetime(booking.start_datetime) %>
+                </span>
+              </div>
+              
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                </svg>
+                <span>
+                  End: <%= OfficeBooking.Bookings.Booking.format_datetime(booking.end_datetime) %>
+                </span>
+              </div>
+              
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                </svg>
+                <span>
+                  Duration: <%= OfficeBooking.Bookings.Booking.duration_minutes(booking) %> minutes
+                </span>
+              </div>
+              
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Status: <%= booking.status %></span>
+              </div>
+            </div>
+
+            <%= if booking.description do %>
+              <div class="mt-3 text-sm text-gray-600">
+                <p><strong>Description:</strong> <%= booking.description %></p>
+              </div>
+            <% end %>
+
+            <!-- Show user for admin view -->
+            <%= if @filter == "all" && OfficeBooking.Accounts.admin?(@current_user) do %>
+              <div class="mt-2 text-sm text-gray-500">
+                Booked by: <%= OfficeBooking.Accounts.User.full_name(booking.user) %>
+              </div>
+            <% end %>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex flex-col sm:flex-row gap-2 ml-4">
+            <.link patch={~p"/bookings/#{booking}/edit"} class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors">
+              Edit
+            </.link>
+            
+            <%= if booking.status == "confirmed" && OfficeBooking.Bookings.Booking.active?(booking) do %>
+              <button
+                phx-click="cancel_booking"
+                phx-value-id={booking.id}
+                data-confirm="Are you sure you want to cancel this booking?"
+                class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+              >
+                Cancel
+              </button>
+            <% end %>
+
+            <%= if OfficeBooking.Accounts.admin?(@current_user) do %>
+              <button
+                phx-click="delete_booking"
+                phx-value-id={booking.id}
+                data-confirm="Are you sure you want to delete this booking?"
+                class="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors"
+              >
+                Delete
+              </button>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="text-center py-12">
+      <svg class="h-16 w-16 text-gray-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+      </svg>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">
+        <%= case @filter do
+          "upcoming" -> "No upcoming bookings"
+          "past" -> "No past bookings"
+          "all" -> "No bookings found"
+          _ -> "No bookings"
+        end %>
+      </h3>
+      <p class="text-gray-500 mb-4">
+        <%= case @filter do
+          "upcoming" -> "You don't have any upcoming room reservations."
+          "past" -> "You haven't made any bookings yet."
+          "all" -> "No bookings in the system yet."
+          _ -> "Start by booking a room."
+        end %>
+      </p>
+      <.link navigate={~p"/gallery"} class="text-indigo-600 hover:text-indigo-800">
+        Browse Available Rooms
+      </.link>
+    </div>
+  <% end %>
+</div>
+
+<!-- Modal for New/Edit Booking -->
+<.modal :if={@live_action in [:new, :edit]} id="booking-modal" show on_cancel={JS.patch(~p"/bookings")}>
+  <.live_component
+    module={OfficeBookingWeb.BookingLive.FormComponent}
+    id={@booking.id || :new}
+    title={@page_title}
+    action={@live_action}
+    booking={@booking}
+    patch={~p"/bookings"}
+    current_user={@current_user}
+  />
+</.modal>

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    build:
+      context: db
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 5438:5432
+    volumes:
+      - ./vol/dev/db/data:/var/lib/postgresql/data
+      - ./cscripts:/cscripts
+    env_file: .env.dev
+
+  elixirapp:
+    build:
+      context: office_booking
+      dockerfile: Dockerfile
+    command: mix phx.server
+    restart: always
+    ports:
+      - 4012:4007
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+    env_file: .env.dev

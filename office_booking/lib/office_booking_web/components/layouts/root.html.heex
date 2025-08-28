@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en" class="[scrollbar-gutter:stable]">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title suffix=" · Phoenix Framework">
+      <%= assigns[:page_title] || "OfficeBooking" %>
+    </.live_title>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+    </script>
+    <link rel="preconnect" href="https://fonts.bunny.net" />
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
+    <style>
+      body { font-family: 'Inter', sans-serif; }
+    </style>
+  </head>
+  <body class="bg-gray-50 antialiased min-h-screen">
+    <%= if assigns[:current_user] do %>
+      <!-- Navigation for authenticated users -->
+      <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-16">
+            <!-- Logo/Brand -->
+            <div class="flex-shrink-0 flex items-center">
+              <div class="flex items-center">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-6a1 1 0 00-1-1H9a1 1 0 00-1 1v6a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span class="ml-3 text-xl font-bold text-gray-900">
+                  <a href="/">OfficeBooking</a>
+                </span>
+              </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="hidden md:flex items-center space-x-4">
+              <a href="/dashboard" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                Dashboard
+              </a>
+              <a href="/gallery" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                Room Gallery
+              </a>
+              
+              <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
+                <a href="/rooms" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                  Manage Rooms
+                </a>
+              <% end %>
+              
+              <div class="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-300">
+                <span class="text-sm text-gray-700">
+                  <%= OfficeBooking.Accounts.User.full_name(assigns[:current_user]) %>
+                </span>
+                <a href="/users/settings" class="text-indigo-600 hover:text-indigo-700 px-3 py-2 text-sm font-medium transition-colors">
+                  Settings
+                </a>
+                <a href="/users/log_out" data-method="delete" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                  Log out
+                </a>
+              </div>
+            </div>
+
+            <!-- Mobile menu button -->
+            <div class="md:hidden">
+              <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900 focus:outline-none focus:text-gray-900">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mobile menu -->
+          <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
+              <a href="/dashboard" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Dashboard</a>
+              <a href="/gallery" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Room Gallery</a>
+              <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
+                <a href="/rooms" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Manage Rooms</a>
+              <% end %>
+              <div class="border-t border-gray-200 pt-2 mt-2">
+                <div class="px-3 py-2 text-sm text-gray-500">
+                  <%= OfficeBooking.Accounts.User.full_name(assigns[:current_user]) %>
+                </div>
+                <a href="/users/settings" class="block px-3 py-2 text-base font-medium text-indigo-600 hover:text-indigo-700">Settings</a>
+                <a href="/users/log_out" data-method="delete" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Log out</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Sidebar layout for authenticated users -->
+      <div class="flex min-h-screen bg-gray-50">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white shadow-sm border-r border-gray-200">
+          <div class="p-6">
+            <nav class="space-y-2">
+              <a href="/dashboard" class="flex items-center px-3 py-2 text-sm font-medium text-gray-900 rounded-lg hover:bg-gray-100 transition-colors">
+                <svg class="w-5 h-5 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                </svg>
+                Dashboard
+              </a>
+              
+              <a href="/gallery" class="flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <svg class="w-5 h-5 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"></path>
+                </svg>
+                Room Gallery
+              </a>
+
+              <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
+                <a href="/rooms" class="flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                  <svg class="w-5 h-5 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-6a1 1 0 00-1-1H9a1 1 0 00-1 1v6a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"></path>
+                  </svg>
+                  Manage Rooms
+                </a>
+              <% end %>
+
+              <a href="/users/settings" class="flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <svg class="w-5 h-5 mr-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                </svg>
+                Settings
+              </a>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+          <div class="p-6">
+            <.flash_group flash={@flash} />
+            <%= @inner_content %>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <%= if @conn.request_path == "/" do %>
+      <!-- Navigation for home page only -->
+      <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-16">
+            <!-- Logo/Brand -->
+            <div class="flex-shrink-0 flex items-center">
+              <div class="flex items-center">
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-6a1 1 0 00-1-1H9a1 1 0 00-1 1v6a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <span class="ml-3 text-xl font-bold text-gray-900">OfficeBooking</span>
+              </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="hidden md:flex items-center space-x-4">
+              <a href="#features" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                Features
+              </a>
+              <a href="#how-it-works" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                How It Works
+              </a>
+              <a href="/gallery" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                Room Gallery
+              </a>
+              
+              <%= if assigns[:current_user] do %>
+                <!-- Authenticated Navigation -->
+                <a href="/dashboard" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                  Dashboard
+                </a>
+                
+                <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
+                  <a href="/rooms" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
+                    Manage Rooms
+                  </a>
+                <% end %>
+                
+                <div class="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-300">
+                  <span class="text-sm text-gray-700">
+                    <%= OfficeBooking.Accounts.User.full_name(assigns[:current_user]) %>
+                  </span>
+                  <a href="/users/settings" class="text-indigo-600 hover:text-indigo-700 px-3 py-2 text-sm font-medium transition-colors">
+                    Settings
+                  </a>
+                  <a href="/users/log_out" data-method="delete" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Log out
+                  </a>
+                </div>
+              <% else %>
+                <!-- Guest Navigation -->
+                <a href="/users/log_in" class="text-indigo-600 hover:text-indigo-700 px-3 py-2 text-sm font-medium transition-colors">
+                  Sign In
+                </a>
+                <a href="/users/register" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                  Get Started
+                </a>
+              <% end %>
+            </div>
+
+            <!-- Mobile menu button -->
+            <div class="md:hidden">
+              <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900 focus:outline-none focus:text-gray-900">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mobile menu -->
+          <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
+              <a href="#features" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Features</a>
+              <a href="#how-it-works" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">How It Works</a>
+              <a href="/gallery" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Room Gallery</a>
+              
+              <%= if assigns[:current_user] do %>
+                <a href="/dashboard" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Dashboard</a>
+                <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
+                  <a href="/rooms" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Manage Rooms</a>
+                <% end %>
+                <div class="border-t border-gray-200 pt-2 mt-2">
+                  <div class="px-3 py-2 text-sm text-gray-500">
+                    <%= OfficeBooking.Accounts.User.full_name(assigns[:current_user]) %>
+                  </div>
+                  <a href="/users/settings" class="block px-3 py-2 text-base font-medium text-indigo-600 hover:text-indigo-700">Settings</a>
+                  <a href="/users/log_out" data-method="delete" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Log out</a>
+                </div>
+              <% else %>
+                <a href="/users/log_in" class="block px-3 py-2 text-base font-medium text-indigo-600 hover:text-indigo-700">Sign In</a>
+                <a href="/users/register" class="block px-3 py-2 text-base font-medium bg-indigo-600 text-white rounded-lg mt-2">Get Started</a>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <% end %>
+      <main class="min-h-screen">
+        <.flash_group flash={@flash} />
+        <%= @inner_content %>
+      </main>
+    <% end %>
+
+    <script>
+      // Mobile menu toggle
+      document.addEventListener('DOMContentLoaded', function() {
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        if (mobileMenuButton && mobileMenu) {
+          mobileMenuButton.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+          });
+        }
+
+        // Handle logout links with DELETE method
+        document.querySelectorAll('a[data-method="delete"]').forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Create a form for DELETE request
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = this.href;
+            
+            // Add CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+              const tokenInput = document.createElement('input');
+              tokenInput.type = 'hidden';
+              tokenInput.name = '_csrf_token';
+              tokenInput.value = csrfToken;
+              form.appendChild(tokenInput);
+            }
+            
+            // Add method override
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.value = 'delete';
+            form.appendChild(methodInput);
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
