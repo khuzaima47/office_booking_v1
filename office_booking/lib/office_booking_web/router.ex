@@ -22,25 +22,10 @@ defmodule OfficeBookingWeb.Router do
 
     get "/", PageController, :home
     # Public room gallery
-
-    live "/bookings", BookingLive.Index, :index
-    live "/bookings/new", BookingLive.Index, :new
-    live "/bookings/:id/edit", BookingLive.Index, :edit
-
-    live "/bookings/:id", BookingLive.Show, :show
-    live "/bookings/:id/show/edit", BookingLive.Show, :edit
   end
 
    scope "/", OfficeBookingWeb do
     pipe_through [:browser, :require_authenticated_user]
-
-
-    live "/bookings", BookingLive.Index, :index
-    live "/bookings/new", BookingLive.Index, :new
-    live "/bookings/:id/edit", BookingLive.Index, :edit
-
-    live "/bookings/:id", BookingLive.Show, :show
-    live "/bookings/:id/show/edit", BookingLive.Show, :edit
   end
 
 
@@ -124,6 +109,13 @@ defmodule OfficeBookingWeb.Router do
 
       live "/gallery", RoomLive.Gallery, :index
       live "/gallery/:id", RoomLive.Gallery, :show
+
+      live "/bookings/new", BookingLive.Index, :new
+      live "/bookings/:id/edit", BookingLive.Index, :edit
+      live "/bookings/:id", BookingLive.Show, :show
+      live "/bookings/:id/show/edit", BookingLive.Show, :edit
+      live "/bookings", BookingLive.Index, :index
+
     end
   end
 end

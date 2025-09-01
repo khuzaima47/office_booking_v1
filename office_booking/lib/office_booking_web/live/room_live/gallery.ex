@@ -98,7 +98,13 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
 
   @impl true
   def handle_info({action, booking}, socket) when action in [:created, :updated, :deleted] do
-    # Refresh room data if we're viewing a specific room
+    # Refresh all rooms data to update availability status in real-time
+    params = build_filter_params(socket, %{})
+    rooms = Rooms.list_rooms(params)
+
+    socket = assign(socket, :rooms, rooms)
+
+    # Also refresh room data if we're viewing a specific room
     if socket.assigns.room && socket.assigns.room.id == booking.room_id do
       room = Rooms.get_room!(socket.assigns.room.id)
       {:noreply, assign(socket, :room, room)}
@@ -159,9 +165,26 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div
               :for={room <- @rooms}
-              class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+              class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative"
               phx-click={JS.navigate(~p"/gallery/#{room.id}")}
             >
+              <!-- Availability Status Badge -->
+              <%= if current_booking = OfficeBooking.Rooms.Room.current_booking(room) do %>
+                <div class="absolute top-2 right-2 z-10">
+                  <div class="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                    <div class="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></div>
+                    Occupied
+                  </div>
+                </div>
+              <% else %>
+                <div class="absolute top-2 right-2 z-10">
+                  <div class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                    <div class="w-2 h-2 bg-white rounded-full mr-1"></div>
+                    Available
+                  </div>
+                </div>
+              <% end %>
+
               <div class="h-48 bg-gray-200">
                 <%= if primary_photo = OfficeBooking.Rooms.Room.primary_photo(room) do %>
                   <img
@@ -180,6 +203,33 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
                 <h3 class="text-lg font-semibold text-gray-900 mb-2"><%= room.name %></h3>
                 <p class="text-sm text-gray-600 mb-2">📍 <%= room.location %></p>
                 <p class="text-sm text-gray-600 mb-3">👥 Up to <%= room.capacity %> people</p>
+
+                <!-- Current Status Info -->
+                <%= if current_booking = OfficeBooking.Rooms.Room.current_booking(room) do %>
+                  <div class="bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
+                    <p class="text-xs font-medium text-red-800">Currently in use</p>
+                    <p class="text-xs text-red-700"><%= current_booking.title %></p>
+                    <p class="text-xs text-red-600">
+                      Until: <%= OfficeBooking.Bookings.Booking.format_time(current_booking.end_datetime) %>
+                    </p>
+                  </div>
+                <% else %>
+                  <!-- Show next upcoming booking if available -->
+                  <% next_booking = OfficeBooking.Rooms.Room.upcoming_bookings(room) |> List.first() %>
+                  <%= if next_booking do %>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-3">
+                      <p class="text-xs font-medium text-yellow-800">Next booking</p>
+                      <p class="text-xs text-yellow-700"><%= next_booking.title %></p>
+                      <p class="text-xs text-yellow-600">
+                        <%= OfficeBooking.Bookings.Booking.format_time(next_booking.start_datetime) %>
+                      </p>
+                    </div>
+                  <% else %>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-2 mb-3">
+                      <p class="text-xs font-medium text-green-800">Available all day</p>
+                    </div>
+                  <% end %>
+                <% end %>
 
                 <%= if room.description do %>
                   <p class="text-sm text-gray-700 mb-3 line-clamp-2"><%= room.description %></p>

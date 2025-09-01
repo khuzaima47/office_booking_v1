@@ -297,8 +297,8 @@ defmodule OfficeBooking.Bookings do
   @doc """
   Converts local CET datetime to UTC.
   """
-  def cet_to_utc(naive_datetime) do
-    case DateTime.new(naive_datetime, "Europe/Berlin") do
+  def pkt_to_utc(naive_datetime) do
+    case DateTime.new(naive_datetime, "Asia/Karachi") do
       {:ok, cet_datetime} -> DateTime.shift_zone!(cet_datetime, "Etc/UTC")
       {:error, _} -> nil
     end
@@ -307,42 +307,66 @@ defmodule OfficeBooking.Bookings do
   @doc """
   Converts UTC datetime to CET.
   """
-  def utc_to_cet(utc_datetime) do
-    DateTime.shift_zone!(utc_datetime, "Europe/Berlin")
+  def utc_to_pkt(utc_datetime) do
+    DateTime.shift_zone!(utc_datetime, "Asia/Karachi")
   end
 
   @doc """
   Generates available time slots for a room on a given date.
   """
   def available_time_slots(%Room{} = room, date) do
-    # Generate 30-minute slots from 10 AM to 10 PM CET
+    # Generate 30-minute slots from 10 AM to 10 PM PKT
     start_time = ~T[10:00:00]
     end_time = ~T[22:00:00]
 
     slots = generate_time_slots(date, start_time, end_time, 30)
 
+    # Get current time in PKT for comparison
+    now_pkt = DateTime.utc_now() |> utc_to_pkt()
+    current_date_pkt = DateTime.to_date(now_pkt)
+
+    # DEBUG: Add these lines
+    IO.inspect({:selected_date, date}, label: "Selected Date")
+    IO.inspect({:current_date_pkt, current_date_pkt}, label: "Current Date PKT")
+    IO.inspect({:date_comparison, Date.compare(date, current_date_pkt)}, label: "Date Comparison")
+    IO.inspect({:now_pkt, now_pkt}, label: "Current Time PKT")
+
+    # Only filter out past slots if the selected date is TODAY
+    slots = case Date.compare(date, current_date_pkt) do
+      :eq ->
+        # Selected date is today - filter out past time slots
+        Enum.filter(slots, fn {slot_start, _slot_end} ->
+          DateTime.compare(slot_start, now_pkt) == :gt
+        end)
+      :gt ->
+        # Selected date is in the future - show all slots
+        slots
+      :lt ->
+        # Selected date is in the past - show no slots (shouldn't happen with your date picker constraints)
+        []
+    end
     # Filter out booked slots
     existing_bookings = list_room_bookings(room)
     |> Enum.filter(fn booking ->
-      booking_date = booking.start_datetime |> utc_to_cet() |> DateTime.to_date()
+      booking_date = booking.start_datetime |> utc_to_pkt() |> DateTime.to_date()
       Date.compare(booking_date, date) == :eq
     end)
 
     Enum.reject(slots, fn {slot_start, slot_end} ->
       Enum.any?(existing_bookings, fn booking ->
-        booking_start = utc_to_cet(booking.start_datetime)
-        booking_end = utc_to_cet(booking.end_datetime)
+        booking_start = utc_to_pkt(booking.start_datetime)
+        booking_end = utc_to_pkt(booking.end_datetime)
 
         # Check if slot overlaps with booking
         not (DateTime.compare(slot_end, booking_start) != :gt or
-             DateTime.compare(slot_start, booking_end) != :lt)
+            DateTime.compare(slot_start, booking_end) != :lt)
       end)
     end)
   end
 
   defp generate_time_slots(date, start_time, end_time, interval_minutes) do
-    start_datetime = DateTime.new!(date, start_time, "Europe/Berlin")
-    end_datetime = DateTime.new!(date, end_time, "Europe/Berlin")
+    start_datetime = DateTime.new!(date, start_time, "Asia/Karachi")
+    end_datetime = DateTime.new!(date, end_time, "Asia/Karachi")
 
     generate_slots(start_datetime, end_datetime, interval_minutes, [])
   end

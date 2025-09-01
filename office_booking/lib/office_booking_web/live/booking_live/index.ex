@@ -7,6 +7,7 @@ defmodule OfficeBookingWeb.BookingLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    # require IEx;IEx.pry()
     if socket.assigns.current_user do
       user = socket.assigns.current_user
 

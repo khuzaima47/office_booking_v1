@@ -49,9 +49,26 @@ defmodule OfficeBooking.Bookings.Booking do
     |> validate_inclusion(:status, @statuses)
     |> validate_length(:title, min: 1, max: 200)
     |> validate_length(:description, max: 1000)
+    |> validate_not_in_past()
     |> validate_datetime_order()
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:room_id)
+  end
+
+  defp validate_not_in_past(changeset) do
+    start_dt = get_field(changeset, :start_datetime)
+
+    if start_dt do
+      now = DateTime.utc_now()
+
+      if DateTime.compare(start_dt, now) != :gt do
+        add_error(changeset, :start_datetime, "cannot be in the past")
+      else
+        changeset
+      end
+    else
+      changeset
+    end
   end
 
   # Custom validations
@@ -90,8 +107,8 @@ defmodule OfficeBooking.Bookings.Booking do
 
     if start_dt do
       now = DateTime.utc_now()
-      cet_now = DateTime.shift_zone!(now, "Europe/Berlin")
-      cet_start = DateTime.shift_zone!(start_dt, "Europe/Berlin")
+      cet_now = DateTime.shift_zone!(now, "Asia/Karachi")
+      cet_start = DateTime.shift_zone!(start_dt, "Asia/Karachi")
 
       # Calculate days difference
       days_diff = Date.diff(DateTime.to_date(cet_start), DateTime.to_date(cet_now))
@@ -124,7 +141,7 @@ defmodule OfficeBooking.Bookings.Booking do
   end
 
   defp valid_business_hour?(datetime) do
-    cet_time = DateTime.shift_zone!(datetime, "Europe/Berlin")
+    cet_time = DateTime.shift_zone!(datetime, "Asia/Karachi")
     hour = cet_time.hour
     hour >= 10 && hour <= 22
   end
@@ -159,7 +176,7 @@ defmodule OfficeBooking.Bookings.Booking do
   """
   def format_datetime(datetime) do
     datetime
-    |> DateTime.shift_zone!("Europe/Berlin")
+    |> DateTime.shift_zone!("Asia/Karachi")
     |> Calendar.strftime("%B %d, %Y at %I:%M %p CET")
   end
 
@@ -168,7 +185,7 @@ defmodule OfficeBooking.Bookings.Booking do
   """
   def format_time(datetime) do
     datetime
-    |> DateTime.shift_zone!("Europe/Berlin")
+    |> DateTime.shift_zone!("Asia/Karachi")
     |> Calendar.strftime("%I:%M %p")
   end
 end

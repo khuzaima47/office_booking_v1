@@ -31,9 +31,15 @@ defmodule OfficeBookingWeb.BookingLive.New do
   end
 
   @impl true
-  def handle_event("change_date", %{"date" => date_str}, socket) do
+  def handle_event("change_date", params, socket) do
+    IO.inspect(params, label: "CHANGE_DATE_PARAMS")
+
+    date_str = params["date"]
+
     case Date.from_iso8601(date_str) do
       {:ok, date} ->
+        IO.inspect({:parsed_date, date}, label: "PARSED_DATE")
+
         socket =
           socket
           |> assign(:selected_date, date)
@@ -48,8 +54,9 @@ defmodule OfficeBookingWeb.BookingLive.New do
 
   @impl true
   def handle_event("select_slot", %{"start" => start_str, "end" => end_str}, socket) do
-    with {:ok, start_dt} <- DateTime.from_iso8601(start_str),
-         {:ok, end_dt} <- DateTime.from_iso8601(end_str) do
+    # Parse the ISO8601 strings with better error handling
+    with {:ok, start_dt} <- parse_datetime_safe(start_str),
+        {:ok, end_dt} <- parse_datetime_safe(end_str) do
 
       changeset = Booking.changeset(%Booking{}, %{
         room_id: socket.assigns.room.id,
@@ -67,8 +74,45 @@ defmodule OfficeBookingWeb.BookingLive.New do
 
       {:noreply, socket}
     else
-      _ ->
+      {:error, reason} ->
+        IO.inspect({:datetime_parse_error, start_str, end_str, reason}, label: "DateTime Parse Error")
         {:noreply, put_flash(socket, :error, "Invalid time slot selected")}
+    end
+  end
+
+# Add this helper function to handle datetime parsing more robustly
+  defp parse_datetime_safe(datetime_string) do
+    case DateTime.from_iso8601(datetime_string) do
+      {:ok, datetime} ->
+        {:ok, datetime}
+      {:ok, datetime, _offset} ->
+        # Handle 3-tuple response when timezone offset is present
+        {:ok, datetime}
+      {:error, :missing_offset} ->
+        # Try parsing as naive datetime and assume it's already in the correct timezone
+        case NaiveDateTime.from_iso8601(datetime_string) do
+          {:ok, naive_dt} ->
+            # Convert to UTC assuming the naive datetime is in CET
+            case DateTime.new(naive_dt, "Asia/Karachi") do
+              {:ok, cet_datetime} ->
+                {:ok, DateTime.shift_zone!(cet_datetime, "Etc/UTC")}
+              error -> error
+            end
+          error -> error
+        end
+      {:error, :invalid_format} ->
+        # Try removing any timezone suffix and parsing as naive datetime
+        cleaned = datetime_string |> String.replace(~r/[+-]\d{2}:\d{2}$/, "")
+        case NaiveDateTime.from_iso8601(cleaned) do
+          {:ok, naive_dt} ->
+            case DateTime.new(naive_dt, "Asia/Karachi") do
+              {:ok, cet_datetime} ->
+                {:ok, DateTime.shift_zone!(cet_datetime, "Etc/UTC")}
+              error -> error
+            end
+          error -> error
+        end
+      error -> error
     end
   end
 
@@ -127,6 +171,9 @@ defmodule OfficeBookingWeb.BookingLive.New do
     room = socket.assigns.room
     date = socket.assigns.selected_date
 
+    # Add debug here to see if this function is being called
+    IO.inspect({:loading_availability_for_date, date}, label: "Loading Availability")
+
     available_slots = Bookings.available_time_slots(room, date)
     current_booking = Bookings.get_current_booking(room)
     upcoming_bookings = Bookings.get_upcoming_bookings(room)
@@ -171,15 +218,16 @@ defmodule OfficeBookingWeb.BookingLive.New do
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Select Date
               </label>
-              <input
-                type="date"
-                value={@selected_date}
-                min={Date.utc_today()}
-                max={Date.add(Date.utc_today(), 2)}
-                phx-change="change_date"
-                name="date"
-                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
+              <form phx-change="change_date">
+                <input
+                  type="date"
+                  name="date"
+                  value={@selected_date}
+                  min={Date.utc_today()}
+                  max={Date.add(Date.utc_today(), 2)}
+                  class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </form>
               <p class="text-xs text-gray-500 mt-1">
                 Bookings can be made up to 2 days in advance
               </p>

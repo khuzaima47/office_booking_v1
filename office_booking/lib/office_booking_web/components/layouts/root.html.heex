@@ -44,6 +44,15 @@
               <a href="/gallery" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
                 Room Gallery
               </a>
+
+              <.link navigate={~p"/messages"} class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors relative">
+                Messages
+                <%= if assigns[:unread_message_count] && assigns.unread_message_count > 0 do %>
+                  <span class="absolute -top-1 -right-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
+                    <%= assigns.unread_message_count %>
+                  </span>
+                <% end %>
+              </.link>
               
               <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
                 <a href="/rooms" class="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors">
@@ -79,6 +88,14 @@
             <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
               <a href="/dashboard" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Dashboard</a>
               <a href="/gallery" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Room Gallery</a>
+              <a href={~p"/messages"} class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 relative">
+                Messages
+                <%= if assigns[:unread_message_count] && assigns.unread_message_count > 0 do %>
+                  <span class="absolute right-2 top-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
+                    <%= assigns.unread_message_count %>
+                  </span>
+                <% end %>
+              </a>
               <%= if OfficeBooking.Accounts.admin?(assigns[:current_user]) do %>
                 <a href="/rooms" class="block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900">Manage Rooms</a>
               <% end %>
