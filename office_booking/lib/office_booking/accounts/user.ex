@@ -15,6 +15,8 @@ defmodule OfficeBooking.Accounts.User do
     field :is_admin, :boolean, default: false
 
     has_many :bookings, OfficeBooking.Bookings.Booking, on_delete: :delete_all
+    has_many :sent_messages, OfficeBooking.Messaging.Message, foreign_key: :from_user_id, on_delete: :delete_all
+    has_many :received_messages, OfficeBooking.Messaging.Message, foreign_key: :to_user_id, on_delete: :delete_all
 
     timestamps()
   end
@@ -113,6 +115,7 @@ defmodule OfficeBooking.Accounts.User do
   def full_name(%__MODULE__{first_name: first_name, last_name: last_name}) do
     "#{first_name} #{last_name}"
   end
+  
 
   defp validate_email(changeset, opts) do
     changeset

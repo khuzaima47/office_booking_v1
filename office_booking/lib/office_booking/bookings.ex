@@ -138,10 +138,33 @@ defmodule OfficeBooking.Bookings do
       Booking.changeset(booking, attrs)
     end
 
-    with {:ok, booking} <- Repo.update(changeset) do
-      booking = Repo.preload(booking, [:room, :user], force: true)
-      broadcast_booking_change(booking, :updated)
-      {:ok, booking}
+    case Repo.update(changeset) do
+      {:ok, booking} ->
+        booking = Repo.preload(booking, [:room, :user], force: true)
+        broadcast_booking_change(booking, :updated)
+        {:ok, booking}
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+
+  @doc """
+  Transfers booking ownership without datetime validation.
+  """
+  def transfer_booking_ownership(%Booking{} = booking, new_owner_id) do
+    changeset = Booking.transfer_changeset(booking, %{
+      user_id: new_owner_id,
+      title: "Transferred: #{booking.title}"
+    })
+
+    case Repo.update(changeset) do
+      {:ok, booking} ->
+        booking = Repo.preload(booking, [:room, :user], force: true)
+        broadcast_booking_change(booking, :updated)
+        {:ok, booking}
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 
@@ -389,4 +412,29 @@ defmodule OfficeBooking.Bookings do
       Enum.reverse(acc)
     end
   end
+
+   @doc """
+  Hook to call when a booking starts (room becomes occupied)
+  """
+  def handle_booking_started(booking) do
+    booking = OfficeBooking.Repo.preload(booking, :room)
+    OfficeBooking.RoomNotifications.broadcast_room_occupied(booking.room, booking)
+  end
+
+  @doc """
+  Hook to call when a booking ends (room becomes available)
+  """
+  def handle_booking_ended(booking) do
+    booking = OfficeBooking.Repo.preload(booking, :room)
+    OfficeBooking.RoomNotifications.broadcast_room_available(booking.room)
+  end
+
+  @doc """
+  Hook to call when a booking is cancelled (room becomes available)
+  """
+  def handle_booking_cancelled(booking) do
+    booking = OfficeBooking.Repo.preload(booking, :room)
+    OfficeBooking.RoomNotifications.broadcast_room_available(booking.room)
+  end
+
 end

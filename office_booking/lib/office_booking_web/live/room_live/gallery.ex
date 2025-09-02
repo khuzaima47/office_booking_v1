@@ -1,8 +1,10 @@
 defmodule OfficeBookingWeb.RoomLive.Gallery do
   use OfficeBookingWeb, :live_view
 
+  alias OfficeBooking.Repo
   alias OfficeBooking.{Rooms, Bookings}
   alias OfficeBooking.Bookings.Booking
+
 
   @impl true
   def mount(_params, _session, socket) do
@@ -87,6 +89,62 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_event("request_transfer", %{"booking_id" => booking_id}, socket) do
+    if socket.assigns.current_user do
+      booking = Bookings.get_booking!(booking_id) |> Repo.preload([:room, :user])
+
+      # Validate the transfer request
+      case validate_transfer_request(socket.assigns.current_user, booking) do
+        :ok ->
+          {:noreply,
+          push_navigate(socket,
+            to: ~p"/messages/transfer_request?booking_id=#{booking_id}")}
+
+        {:error, reason} ->
+          {:noreply,
+          socket
+          |> put_flash(:error, reason)
+          |> push_navigate(to: ~p"/gallery/#{booking.room_id}")}
+      end
+    else
+      {:noreply,
+      socket
+      |> put_flash(:error, "You must be signed in to request room transfers")
+      |> push_navigate(to: ~p"/users/log_in")}
+    end
+  end
+
+  # Validation function for transfer requests
+  defp validate_transfer_request(current_user, booking) do
+    minutes_until_start = DateTime.diff(booking.start_datetime, DateTime.utc_now(), :minute)
+
+    cond do
+      # Can't transfer your own booking
+      booking.user_id == current_user.id ->
+        {:error, "You cannot request transfer of your own booking"}
+
+      # Booking must be confirmed
+      booking.status != "confirmed" ->
+        {:error, "Can only request transfer of confirmed bookings"}
+
+      # Must be at least 10 minutes before the meeting
+      minutes_until_start < 10 ->
+        if DateTime.compare(booking.start_datetime, DateTime.utc_now()) == :lt do
+          {:error, "Cannot request transfer of a meeting that has already started"}
+        else
+          {:error, "Cannot request transfer less than 5 minutes before the meeting starts"}
+        end
+
+      # Meeting has already ended
+      DateTime.compare(booking.end_datetime, DateTime.utc_now()) == :lt ->
+        {:error, "Cannot request transfer of a past meeting"}
+
+      true ->
+        :ok
+    end
+  end
+
   # Build unified filter parameters
   defp build_filter_params(socket, new_params) do
     %{
@@ -113,7 +171,72 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
     end
   end
 
-   @impl true
+  # Helper function to check if transfer request should be shown
+  defp show_transfer_request?(booking, current_user) do
+    minutes_until_start = DateTime.diff(booking.start_datetime, DateTime.utc_now(), :minute)
+
+    cond do
+      # No current user - don't show
+      is_nil(current_user) -> false
+
+      # Don't show to the booking owner themselves
+      booking.user_id == current_user.id -> false
+
+      # Don't show if booking is not confirmed
+      booking.status != "confirmed" -> false
+
+      # Show only if there are at least 5 minutes until the meeting starts
+      minutes_until_start >= 10 -> true
+
+      # Don't show in all other cases
+      true -> false
+    end
+  end
+
+  # Helper function to check if contact user should be shown
+  defp show_contact_user?(booking, current_user) do
+    cond do
+      # No current user - don't show
+      is_nil(current_user) -> false
+
+      # Only show if the current user is NOT the booking owner
+      booking.user_id != current_user.id -> true
+
+      # Don't show to booking owner
+      true -> false
+    end
+  end
+
+  # Helper function to get transfer button status and message
+  defp transfer_button_status(booking, current_user) do
+    minutes_until_start = DateTime.diff(booking.start_datetime, DateTime.utc_now(), :minute)
+
+    cond do
+      is_nil(current_user) ->
+        {:hidden, ""}
+
+      booking.user_id == current_user.id ->
+        {:owner, "Your booking"}
+
+      booking.status != "confirmed" ->
+        {:disabled, "Booking not confirmed"}
+
+      DateTime.compare(booking.start_datetime, DateTime.utc_now()) == :lt ->
+        if DateTime.compare(booking.end_datetime, DateTime.utc_now()) == :gt do
+          {:disabled, "Meeting in progress"}
+        else
+          {:disabled, "Meeting ended"}
+        end
+
+      minutes_until_start < 10 ->
+        {:disabled, "Starting in #{minutes_until_start} minutes"}
+
+      true ->
+        {:available, "Request transfer available"}
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -371,6 +494,7 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
 
                 <!-- Current Status -->
                 <%= if current_booking = OfficeBooking.Rooms.Room.current_booking(@room) do %>
+                <% current_booking = OfficeBooking.Rooms.Room.current_booking(@room) %>
                   <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                     <div class="flex items-center justify-between">
                       <div>
@@ -383,14 +507,53 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
                         </p>
                       </div>
 
-                      <%= if assigns[:current_user] do %>
-                        <.link
-                          navigate={~p"/messages/new?#{[user_id: current_booking.user.id, room_id: @room.id]}"}
-                          class="px-3 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
-                        >
-                          Contact User
-                        </.link>
-                      <% end %>
+                      <%!-- <div class="bg-purple-100 p-2 text-xs mb-4">
+                      <p>Current user ID: <%= if assigns[:current_user], do: assigns[:current_user].id, else: "nil" %></p>
+                      <p>Booking user ID: <%= current_booking.user_id %></p>
+                      <p>Booking status: <%= current_booking.status %></p>
+                      <p>Start time: <%= current_booking.start_datetime %></p>
+                      <p>Current time: <%= DateTime.utc_now() %></p>
+                      <p>Minutes until start: <%= DateTime.diff(current_booking.start_datetime, DateTime.utc_now(), :minute) %></p>
+                      <p>Button status: <%= inspect(transfer_button_status(current_booking, assigns[:current_user])) %></p>
+                    </div> --%>
+
+                      <!-- Action buttons with improved logic -->
+                      <div class="flex flex-col space-y-2">
+                        <% {status, message} = transfer_button_status(current_booking, assigns[:current_user]) %>
+                        <%= case status do %>
+                          <% :available -> %>
+                            <button
+                              phx-click="request_transfer"
+                              phx-value-booking_id={current_booking.id}
+                              class="px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700"
+                            >
+                              Request Transfer
+                            </button>
+
+                          <% :owner -> %>
+                            <div class="px-3 py-2 bg-green-100 text-green-800 text-sm rounded text-center">
+                              <span class="font-medium"><%= message %></span>
+                            </div>
+
+                          <% :disabled -> %>
+                            <div class="px-3 py-2 bg-gray-100 text-gray-600 text-sm rounded text-center">
+                              <span class="text-xs"><%= message %></span>
+                            </div>
+
+                          <% :hidden -> %>
+                            <!-- Nothing shown for non-authenticated users -->
+                        <% end %>
+
+                        <!-- Contact User button with improved logic -->
+                        <%= if show_contact_user?(current_booking, assigns[:current_user]) do %>
+                          <.link
+                            navigate={~p"/messages/new?user_id=#{current_booking.user.id}&room_id=#{@room.id}"}
+                            class="px-3 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 text-center"
+                          >
+                            Contact User
+                          </.link>
+                        <% end %>
+                      </div>
                     </div>
                   </div>
                 <% else %>
@@ -406,37 +569,75 @@ defmodule OfficeBookingWeb.RoomLive.Gallery do
 
                 <!-- Upcoming Bookings -->
                 <% upcoming = OfficeBooking.Rooms.Room.upcoming_bookings(@room) %>
-                <%= if upcoming != [] do %>
-                  <div class="mb-4">
-                    <h4 class="text-md font-medium text-gray-900 mb-2">Upcoming Bookings</h4>
-                    <div class="space-y-2">
-                      <div
-                        :for={booking <- Enum.take(upcoming, 3)}
-                        class="bg-yellow-50 border border-yellow-200 rounded p-3 flex items-center justify-between"
-                      >
-                        <div class="text-sm">
-                          <p class="font-medium text-yellow-900"><%= booking.title %></p>
-                          <p class="text-yellow-700">
-                            <%= OfficeBooking.Bookings.Booking.format_time(booking.start_datetime) %> -
-                            <%= OfficeBooking.Bookings.Booking.format_time(booking.end_datetime) %>
-                          </p>
-                          <p class="text-yellow-600">
-                            By: <%= OfficeBooking.Accounts.User.full_name(booking.user) %>
-                          </p>
-                        </div>
+                  <%= if upcoming != [] do %>
+                    <div class="mb-4">
+                      <h4 class="text-md font-medium text-gray-900 mb-2">Upcoming Bookings</h4>
+                      <div class="space-y-2">
+                        <div
+                          :for={booking <- Enum.take(upcoming, 3)}
+                          class="bg-yellow-50 border border-yellow-200 rounded p-3 flex items-center justify-between"
+                        >
+                          <div class="text-sm flex-1">
+                            <p class="font-medium text-yellow-900"><%= booking.title %></p>
+                            <p class="text-yellow-700">
+                              <%= OfficeBooking.Bookings.Booking.format_time(booking.start_datetime) %> -
+                              <%= OfficeBooking.Bookings.Booking.format_time(booking.end_datetime) %>
+                            </p>
+                            <p class="text-yellow-600">
+                              By: <%= OfficeBooking.Accounts.User.full_name(booking.user) %>
+                            </p>
+                          </div>
 
-                        <%= if assigns[:current_user] do %>
-                          <.link
-                            navigate={~p"/messages/new?#{[user_id: booking.user.id, room_id: @room.id]}"}
-                            class="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700"
-                          >
-                            Contact
-                          </.link>
-                        <% end %>
+                           <!-- Add debug info for upcoming bookings too -->
+                          <%!-- <div class="bg-purple-100 p-1 text-xs mr-2 border rounded">
+                            <p>User: <%= if assigns[:current_user], do: assigns[:current_user].id, else: "nil" %> vs <%= booking.user_id %></p>
+                            <p>Status: <%= booking.status %></p>
+                            <p>Minutes: <%= DateTime.diff(booking.start_datetime, DateTime.utc_now(), :minute) %></p>
+                            <p>Button: <%= inspect(transfer_button_status(booking, assigns[:current_user])) %></p>
+                          </div> --%>
+
+                          <!-- Action buttons for upcoming bookings -->
+                          <div class="flex flex-col space-y-1">
+                            <!-- Transfer request button for upcoming bookings -->
+                            <% {status, message} = transfer_button_status(booking, assigns[:current_user]) %>
+                            <%= case status do %>
+                              <% :available -> %>
+                                <button
+                                  phx-click="request_transfer"
+                                  phx-value-booking_id={booking.id}
+                                  class="px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+                                >
+                                  Request Transfer
+                                </button>
+
+                              <% :owner -> %>
+                                <div class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded text-center">
+                                  Your booking
+                                </div>
+
+                              <% :disabled -> %>
+                                <div class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded text-center">
+                                  <%= message %>
+                                </div>
+
+                              <% :hidden -> %>
+                                <!-- Nothing shown for non-authenticated users -->
+                            <% end %>
+
+                            <!-- Contact User button -->
+                            <%= if show_contact_user?(booking, assigns[:current_user]) do %>
+                              <.link
+                                navigate={~p"/messages/new?#{[user_id: booking.user.id, room_id: @room.id]}"}
+                                class="px-2 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 text-center"
+                              >
+                                Contact
+                              </.link>
+                            <% end %>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                <% end %>
+                  <% end %>
 
                 <!-- Book This Room Button -->
                 <%= if assigns[:current_user] do %>

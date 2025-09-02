@@ -94,6 +94,11 @@ defmodule OfficeBookingWeb.Router do
       live "/rooms/:id/edit", RoomLive.Index, :edit
       live "/rooms/:id", RoomLive.Show, :show
       live "/rooms/:id/show/edit", RoomLive.Show, :edit
+
+      live "/messages", MessageLive.Index, :index
+      live "/messages/new", MessageLive.New, :new
+      live "/messages/conversation/:user_id", MessageLive.Conversation, :show
+      live "/messages/transfer_request", MessageLive.TransferRequest, :new
     end
   end
 

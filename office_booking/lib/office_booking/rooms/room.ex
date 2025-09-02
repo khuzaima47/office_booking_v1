@@ -18,6 +18,8 @@ defmodule OfficeBooking.Rooms.Room do
     has_many :photos, RoomPhoto, on_delete: :delete_all
     has_many :bookings, Booking, on_delete: :delete_all
 
+    has_many :messages, OfficeBooking.Messaging.Message, on_delete: :nilify_all
+
     timestamps()
   end
 

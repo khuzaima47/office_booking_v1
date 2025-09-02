@@ -16,6 +16,7 @@ defmodule OfficeBooking.Bookings.Booking do
 
     belongs_to :user, User
     belongs_to :room, Room
+    has_many :messages, OfficeBooking.Messaging.Message, on_delete: :nilify_all
 
     timestamps()
   end
@@ -53,6 +54,16 @@ defmodule OfficeBooking.Bookings.Booking do
     |> validate_datetime_order()
     |> foreign_key_constraint(:user_id)
     |> foreign_key_constraint(:room_id)
+  end
+
+  # changeset specifically for transfers
+  def transfer_changeset(booking, attrs) do
+    booking
+    |> cast(attrs, [:user_id, :title])
+    |> validate_required([:user_id, :title])
+    |> validate_length(:title, max: 200)
+    |> foreign_key_constraint(:user_id)
+    # NO datetime validations - we're only changing ownership
   end
 
   defp validate_not_in_past(changeset) do
@@ -172,12 +183,39 @@ defmodule OfficeBooking.Bookings.Booking do
   end
 
   @doc """
-  Formats datetime for display in CET timezone
+  Formats datetime for display in CET timezone, handling string inputs.
   """
-  def format_datetime(datetime) do
+  # Function clause for handling string input
+  def format_datetime(datetime) when is_binary(datetime) do
+    case DateTime.from_iso8601(datetime) do
+      {:ok, datetime_struct, _offset} -> format_datetime(datetime_struct)
+      {:error, _reason} -> datetime
+    end
+  end
+
+  # Function clause for handling a DateTime struct
+  def format_datetime(%DateTime{} = datetime) do
     datetime
     |> DateTime.shift_zone!("Asia/Karachi")
-    |> Calendar.strftime("%B %d, %Y at %I:%M %p CET")
+    |> Calendar.strftime("%B %d, %Y at %I:%M %p PKT")
+  end
+
+  @doc """
+  Formats time only for display in CET timezone, handling string inputs.
+  """
+  # Function clause for handling string input
+  def format_time(datetime) when is_binary(datetime) do
+    case DateTime.from_iso8601(datetime) do
+      {:ok, datetime_struct, _offset} -> format_time(datetime_struct)
+      {:error, _reason} -> datetime
+    end
+  end
+
+  # Function clause for handling a DateTime struct
+  def format_time(%DateTime{} = datetime) do
+    datetime
+    |> DateTime.shift_zone!("Asia/Karachi")
+    |> Calendar.strftime("%I:%M %p PKT")
   end
 
   @doc """
