@@ -17,7 +17,7 @@ priv/static/cache_manifest.json
 
 # === Compiled Assets ===
 **/assets/css/
-**/assets/js/
+# **/assets/js/
 **/assets/vendor/
 priv/static/
 priv/static/audio
