@@ -16,7 +16,7 @@ priv/static/cache_manifest.json
 **/*.boot
 
 # === Compiled Assets ===
-**/assets/css/
+# **/assets/css/
 # **/assets/js/
 **/assets/vendor/
 priv/static/
